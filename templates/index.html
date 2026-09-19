@@ -9,10 +9,13 @@
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         h1 { color: #2c3e50; text-align: center; font-size: 24px; margin-bottom: 5px; }
         .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 30px; font-size: 14px; }
+        .upload-section { background: #ebf5fb; padding: 20px; border-radius: 6px; border: 1px dashed #3498db; margin-bottom: 30px; text-align: center; }
+        .upload-btn { background-color: #2ecc71; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .upload-btn:hover { background-color: #27ae60; }
         .file-list { list-style: none; padding: 0; }
         .file-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #fafafa; margin-bottom: 10px; border-radius: 6px; border: 1px solid #eaeaea; }
         .file-name { font-weight: 500; font-size: 15px; color: #34495e; }
-        .download-btn { background-color: #3498db; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: bold; transition: background 0.2s; }
+        .download-btn { background-color: #3498db; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: bold; }
         .download-btn:hover { background-color: #2980b9; }
         .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #bdc3c7; }
     </style>
@@ -23,6 +26,15 @@
     <h1>Peer-to-Peer File Hub</h1>
     <div class="subtitle">Direct local network file sharing over Hotspot</div>
     
+    <!-- NEW UPLOAD BOX -->
+    <div class="upload-section">
+        <h3>📤 Share a New File</h3>
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <input type="file" name="file" required><br>
+            <button type="submit" class="upload-btn">Upload to Peer Network</button>
+        </form>
+    </div>
+
     <h3>Available Files on Peer Network:</h3>
     <ul class="file-list">
         {% for file in files %}

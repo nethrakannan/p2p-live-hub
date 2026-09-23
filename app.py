@@ -1,40 +1,44 @@
 from flask import Flask, render_template, send_from_directory, request, redirect, url_for, abort
 import os
-import random
-import string
 
 app = Flask(__name__)
 
 # CONFIGURATION
 BASE_DIR = './shared_files'
 
-def generate_random_room_id():
-    """Generates a secure, random 6-character room token (e.g., A5X9K2)"""
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-
 @app.route('/')
-def global_landing():
-    # If someone just hits the main link, automatically assign them a random private room
-    random_room = generate_random_room_id()
-    return redirect(url_for('room_home', room_id=random_room))
+def lobby():
+    # Show the landing page first instead of auto-generating a random ID
+    return render_template('lobby.html')
+
+@app.route('/join', methods=['POST'])
+def join_room():
+    # Grab the custom room name typed by the user
+    room_name = request.form.get('room_name', '').strip()
+    if not room_name:
+        return redirect(url_for('lobby'))
+    
+    # Sanitize the name so it doesn't cause folder errors (keeps only letters, numbers, hyphens)
+    safe_room_name = "".join(x for x in room_name if x.isalnum() or x in ('-', '_'))
+    
+    # Send the user to their custom room URL
+    return redirect(url_for('room_home', room_id=safe_room_name))
 
 @app.route('/room/<room_id>')
 def room_home(room_id):
-    # Sanitize room ID to avoid path traversal bugs
-    room_id = "".join(x for x in room_id if x.isalnum())
+    # Ensure folder structure exists for the custom room name
+    room_id = "".join(x for x in room_id if x.isalnum() or x in ('-', '_'))
     room_dir = os.path.join(BASE_DIR, room_id)
     
-    # Automatically build an isolated directory folder for this specific room
     if not os.path.exists(room_dir):
         os.makedirs(room_dir)
         
-    # Read files belonging ONLY to this room identifier
     files = [f for f in os.listdir(room_dir) if os.path.isfile(os.path.join(room_dir, f))]
     return render_template('index.html', room_id=room_id, files=files)
 
 @app.route('/room/<room_id>/upload', methods=['POST'])
 def upload_file(room_id):
-    room_id = "".join(x for x in room_id if x.isalnum())
+    room_id = "".join(x for x in room_id if x.isalnum() or x in ('-', '_'))
     room_dir = os.path.join(BASE_DIR, room_id)
     
     if 'file' not in request.files:
@@ -50,7 +54,7 @@ def upload_file(room_id):
 
 @app.route('/room/<room_id>/download/<filename>')
 def download_file(room_id, filename):
-    room_id = "".join(x for x in room_id if x.isalnum())
+    room_id = "".join(x for x in room_id if x.isalnum() or x in ('-', '_'))
     room_dir = os.path.join(BASE_DIR, room_id)
     try:
         return send_from_directory(room_dir, filename, as_attachment=True)
@@ -59,7 +63,7 @@ def download_file(room_id, filename):
 
 @app.route('/room/<room_id>/delete/<filename>')
 def delete_file(room_id, filename):
-    room_id = "".join(x for x in room_id if x.isalnum())
+    room_id = "".join(x for x in room_id if x.isalnum() or x in ('-', '_'))
     room_dir = os.path.join(BASE_DIR, room_id)
     file_path = os.path.join(room_dir, filename)
     try:

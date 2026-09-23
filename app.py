@@ -1,48 +1,71 @@
 from flask import Flask, render_template, send_from_directory, request, redirect, url_for, abort
 import os
+import random
+import string
 
 app = Flask(__name__)
 
 # CONFIGURATION
-SHARED_DIR = './shared_files'
+BASE_DIR = './shared_files'
 
-if not os.path.exists(SHARED_DIR):
-    os.makedirs(SHARED_DIR)
+def generate_random_room_id():
+    """Generates a secure, random 6-character room token (e.g., A5X9K2)"""
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
 @app.route('/')
-def home():
-    files = [f for f in os.listdir(SHARED_DIR) if os.path.isfile(os.path.join(SHARED_DIR, f))]
-    return render_template('index.html', files=files)
+def global_landing():
+    # If someone just hits the main link, automatically assign them a random private room
+    random_room = generate_random_room_id()
+    return redirect(url_for('room_home', room_id=random_room))
 
-@app.route('/upload', methods=['POST'])
-def upload_file():
+@app.route('/room/<room_id>')
+def room_home(room_id):
+    # Sanitize room ID to avoid path traversal bugs
+    room_id = "".join(x for x in room_id if x.isalnum())
+    room_dir = os.path.join(BASE_DIR, room_id)
+    
+    # Automatically build an isolated directory folder for this specific room
+    if not os.path.exists(room_dir):
+        os.makedirs(room_dir)
+        
+    # Read files belonging ONLY to this room identifier
+    files = [f for f in os.listdir(room_dir) if os.path.isfile(os.path.join(room_dir, f))]
+    return render_template('index.html', room_id=room_id, files=files)
+
+@app.route('/room/<room_id>/upload', methods=['POST'])
+def upload_file(room_id):
+    room_id = "".join(x for x in room_id if x.isalnum())
+    room_dir = os.path.join(BASE_DIR, room_id)
+    
     if 'file' not in request.files:
-        return redirect(url_for('home'))
+        return redirect(url_for('room_home', room_id=room_id))
     
     file = request.files['file']
     if file.filename == '':
-        return redirect(url_for('home'))
+        return redirect(url_for('room_home', room_id=room_id))
     
     if file:
-        file.save(os.path.join(SHARED_DIR, file.filename))
-        return redirect(url_for('home'))
+        file.save(os.path.join(room_dir, file.filename))
+        return redirect(url_for('room_home', room_id=room_id))
 
-@app.route('/download/<filename>')
-def download_file(filename):
+@app.route('/room/<room_id>/download/<filename>')
+def download_file(room_id, filename):
+    room_id = "".join(x for x in room_id if x.isalnum())
+    room_dir = os.path.join(BASE_DIR, room_id)
     try:
-        return send_from_directory(SHARED_DIR, filename, as_attachment=True)
+        return send_from_directory(room_dir, filename, as_attachment=True)
     except FileNotFoundError:
         abort(404)
 
-# NEW DELETE ROUTE
-@app.route('/delete/<filename>')
-def delete_file(filename):
-    file_path = os.path.join(SHARED_DIR, filename)
+@app.route('/room/<room_id>/delete/<filename>')
+def delete_file(room_id, filename):
+    room_id = "".join(x for x in room_id if x.isalnum())
+    room_dir = os.path.join(BASE_DIR, room_id)
+    file_path = os.path.join(room_dir, filename)
     try:
-        # Check if file exists and remove it
         if os.path.exists(file_path) and os.path.isfile(file_path):
             os.remove(file_path)
-        return redirect(url_for('home'))
+        return redirect(url_for('room_home', room_id=room_id))
     except Exception:
         abort(500)
 
